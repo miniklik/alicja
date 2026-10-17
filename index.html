@@ -979,7 +979,7 @@ body.langmode .line{font-size:18px;color:#fff;opacity:1}
   <div id="hero"><h1 id="heroTitle"></h1><p id="heroSub"></p></div>
   <div id="boki">
     <div id="bokZeby" title="koła zębate — jak w maszynie 3D z mojej historii"></div>
-    <div id="bokKostka" title="kliknij — to tylko tekst"></div>
+    <div id="bokKostka" title="kliknij — nowe kody Alicji"></div>
   </div>
 </div>
 
@@ -1792,7 +1792,8 @@ function bokKostkaStart(){
   let skok = 0;
   host.addEventListener('click', () => { skok = 1; try { const a = new (window.AudioContext || window.webkitAudioContext)(), o = a.createOscillator(), g = a.createGain();
     o.frequency.value = 440; g.gain.setValueAtTime(0.3, a.currentTime); g.gain.exponentialRampToValueAtTime(0.001, a.currentTime + 1);
-    o.connect(g).connect(a.destination); o.start(); o.stop(a.currentTime + 1); setTimeout(() => a.close(), 1300); } catch(e){} });
+    o.connect(g).connect(a.destination); o.start(); o.stop(a.currentTime + 1); setTimeout(() => a.close(), 1300); } catch(e){}
+    setTimeout(() => { location.href = 'nowe-kody.html'; }, 550); });   // po podskoku otwiera „Nowe kody Alicji”
   let w = 0;
   (function f(){ BK.raf = requestAnimationFrame(f);
     const b = document.body.classList, widac = b.contains('p3d') && !['story', 'appmode', 'roommode', 'holomode', 'kimmode', 'langmode', 'pokazmode'].some(c => b.contains(c)) && !document.hidden;
