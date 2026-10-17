@@ -5873,7 +5873,7 @@ function dmPlate(name,col){var c=dmCanvas(512,128),x=c.getContext('2d');x.font='
   var sp=new THREE.Sprite(new THREE.SpriteMaterial({map:new THREE.CanvasTexture(c),transparent:true,depthWrite:false}));sp.scale.set(1.9,0.475,1);sp.position.y=2.4;return sp;}
 
 // ---------- 🐱 ŚCIANY TABBY (jak w pokoju Tabby): mural z księżycem i miasteczkiem, dach z chodzącym kotem ----------
-// lewa ściana (x = −9): „Tabby — Gry z pudełek.” + przejście z deszczem znaków (E → strona Tabby)
+// lewa ściana (x = −9): „Tabby — Gry z pudełek.” (bez przejścia do Tabby — tu będzie strzelnica)
 // prawa ściana (x = +9): „Tabby — pokój gier”
 var TW={mt:null,mc:null,t:0},DM_CATS=[];
 var TW_OP=1.6,TW_OH=4.2,TW_RY=6.33;
@@ -6966,7 +6966,7 @@ function dmHall(){
   // hol: x −9..9, z −16..16
   dmBox(18.8,0.2,32.8,cFloor,0,-0.1,0);var c1=dmBox(18.8,0.2,32.8,cDark,0,H+0.1,0);c1.castShadow=true; // dach zasłania słońce
   dmBox(18.8,H,0.4,cWall,0,H/2,16.2,1); // ściana z monitorem
-  dmBox(0.4,H,14.8,cWall,-9.2,H/2,9.0,1);dmBox(0.4,H,14.8,cWall,-9.2,H/2,-9.0,1);dmBox(0.4,H-4.2,3.2,cWall,-9.2,4.2+(H-4.2)/2,0,1); // lewa ściana z przejściem do Tabby
+  dmBox(0.4,H,32.8,cWall,-9.2,H/2,0,1); // lewa ściana — pełna (bez przejścia do Tabby; tu będzie strzelnica)
   dmBox(0.4,H,32.8,cWall,9.2,H/2,0,1); // prawa ściana — pokój gier
   var CW=DM_SL; // korytarz na całą szerokość holu: w środku windy, po bokach wejścia na schody
   dmBox(2*CW+0.8,H-4.5,0.4,cWall,0,4.5+(H-4.5)/2,-16.2,1); // nadproże nad szerokim przejściem
@@ -6986,7 +6986,7 @@ function dmHall(){
   for(var z=12;z>=-12;z-=6)dmBox(3.2,0.06,0.9,lamp,0,H-0.02,z);
   dmLight(0,0xfff0dd,1.25,40,0,8,8);dmLight(0,0xfff0dd,1.25,40,0,8,-8);
   // 🐱 ściany Tabby — z kotem na dachu
-  dmTabbyWall(-1,{moonZ:-7,logoZ:14.6,sub:'Gry z pudełek.',panel:'🐱 Wejście do Tabby',panel2:'tworzenie gier 3D',hole:true});
+  dmTabbyWall(-1,{moonZ:-7,logoZ:14.6,sub:'Gry z pudełek.'}); // bez drzwi i bez napisu „Wejście do Tabby”
   dmTabbyWall(1,{seed:7654321,moonZ:-6,logoZ:11.5,sub:'— pokój gier',subBig:true,subCol:'#ffd27a',panel:'🎮 Wpadaj, gramy!',panel2:'zaproś znajomych linkiem',panelCol:'#f2c200',panelCol2:'#ffd27a'});
   // monitor na głównej ścianie: kto jest w domu
   var mc=dmCanvas(1024,576);DM.mon={cv:mc,tx:new THREE.CanvasTexture(mc),min:-1};
