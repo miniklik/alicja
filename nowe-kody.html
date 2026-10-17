@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Nowe kody Alicji</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Outfit:wght@300;600;800&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0b0d1a;--ink:#ece8df;--dim:#9aa0ad;--accent:#ffc861;--accent2:#7cc4ff;--pink:#ff6fa8;--card:#141834;--line:rgba(255,255,255,.1)}
+*{box-sizing:border-box}
+html,body{margin:0;background:radial-gradient(1200px 700px at 50% 0%,#1a1f45,#0b0d1a 70%) fixed;color:var(--ink);font-family:Outfit,sans-serif;min-height:100%}
+.wrap{max-width:1600px;margin:0 auto;padding:12px clamp(16px,6vw,110px) 60px}
+.back{display:inline-flex;align-items:center;gap:8px;margin-top:12px;padding:10px 20px;border-radius:999px;border:1px solid var(--line);background:rgba(255,255,255,.03);color:var(--ink);font:16px Outfit,sans-serif;text-decoration:none;transition:border-color .2s,background .2s}
+.back:hover{border-color:rgba(255,200,97,.5);background:rgba(255,200,97,.08)}
+h1{margin:26px 0 6px;font-size:clamp(34px,4.6vw,52px);font-weight:800;letter-spacing:-.01em;line-height:1.05}
+h1 span{color:var(--accent)}
+.sub{color:var(--dim);font-size:18px;margin:0 0 6px}
+.lead{color:#c9ced8;font-size:16px;line-height:1.55;max-width:680px;margin:0 0 28px}
+.count{color:var(--dim);font-size:14px;margin:0 0 18px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:20px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;overflow:hidden;display:flex;flex-direction:column;transition:border-color .2s,transform .2s}
+.card:hover{border-color:rgba(255,200,97,.35);transform:translateY(-2px)}
+.prev{height:285px;background:linear-gradient(180deg,#151a3d,#10142e);position:relative;cursor:pointer}
+.prev canvas{width:100%;height:100%;display:block}
+.prev .hint{position:absolute;left:12px;bottom:10px;font:12px 'JetBrains Mono',monospace;color:rgba(255,255,255,.35)}
+.body{padding:16px 20px 20px;display:flex;flex-direction:column;flex:1}
+.body h2{margin:0 0 10px;font-size:19px;font-weight:600}
+.tag{align-self:flex-start;font:600 11px Outfit,sans-serif;letter-spacing:.08em;text-transform:uppercase;padding:4px 10px;border-radius:999px;background:rgba(255,200,97,.12);color:var(--accent);margin-bottom:12px}
+.body p{margin:0 0 16px;color:#b9bfcc;font-size:14.5px;line-height:1.55;flex:1}
+.btn{display:flex;align-items:center;justify-content:center;gap:8px;padding:11px 14px;border-radius:8px;border:1px solid rgba(124,196,255,.3);background:rgba(124,196,255,.08);color:var(--accent);font:600 15px Outfit,sans-serif;text-decoration:none}
+.btn[aria-disabled="true"]{opacity:.55;cursor:default}
+footer{margin-top:40px;color:var(--dim);font-size:13px;text-align:center}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <a class="back" href="index.html">← Alicja</a>
+  <h1>Nowe kody <span>Alicji</span></h1>
+  <p class="sub">Co nowego wymyśliłam</p>
+  <p class="lead">Tu będą trafiać moje najnowsze pomysły — małe strony i zabawki zrobione w samym HTML. Kliknij kostkę, żeby się przywitała.</p>
+  <p class="count" id="count"></p>
+  <div class="grid" id="grid"></div>
+  <footer>Alicja · nowe kody</footer>
+</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+// ===== KARTY: na razie cztery miejsca na przyszłe pomysły — tytuł, opis i link wpisujemy tu, gdy kod będzie gotowy =====
+// link: '' = przycisk „Wkrótce” (nieaktywny); np. link:'moj-pomysl.html' = przycisk „Otwórz”
+const KODY = [
+  { tytul:'Nowy kod #1', tag:'już wkrótce', opis:'Tu pojawi się mój nowy pomysł.', link:'', kolory:['#ffc861','#7cc4ff','#ff6fa8','#8affc1','#b28cff','#ff9a4d'], ton:440 },
+  { tytul:'Nowy kod #2', tag:'już wkrótce', opis:'Tu pojawi się mój nowy pomysł.', link:'', kolory:['#7cc4ff','#b28cff','#8affc1','#ffc861','#ff6fa8','#5ad1ff'], ton:494 },
+  { tytul:'Nowy kod #3', tag:'już wkrótce', opis:'Tu pojawi się mój nowy pomysł.', link:'', kolory:['#ff6fa8','#ffc861','#ff9a4d','#7cc4ff','#8affc1','#b28cff'], ton:523 },
+  { tytul:'Nowy kod #4', tag:'już wkrótce', opis:'Tu pojawi się mój nowy pomysł.', link:'', kolory:['#8affc1','#ff9a4d','#7cc4ff','#ff6fa8','#ffc861','#b28cff'], ton:587 }
+];
+const $ = s => document.querySelector(s);
+$('#count').textContent = KODY.length + ' ' + (KODY.length === 1 ? 'pomysł' : 'pomysły') + ' w drodze';
+
+// ===== kostki 3D: jedna karta graficzna (jeden renderer) rysuje wszystkie kostki po kolei =====
+const R = new THREE.WebGLRenderer({ antialias:true, alpha:true });
+const PX = Math.min(devicePixelRatio || 1, 2), W = 380, H = 285;
+R.setPixelRatio(PX); R.setSize(W, H, false);
+function sciana(kol, txt){ // ścianka kostki — jak na ekranie głównym Alicji
+  const c = document.createElement('canvas'); c.width = c.height = 256; const x = c.getContext('2d');
+  x.fillStyle = kol; x.fillRect(0,0,256,256); x.strokeStyle = 'rgba(255,255,255,.9)'; x.lineWidth = 10; x.strokeRect(5,5,246,246);
+  x.fillStyle = '#fff'; x.font = 'bold ' + (txt.length > 5 ? 46 : 62) + 'px Outfit, sans-serif'; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillText(txt,128,132);
+  return new THREE.MeshStandardMaterial({ map:new THREE.CanvasTexture(c), roughness:.6 });
+}
+const karty = [];
+KODY.forEach((k, i) => {
+  const nr = '#' + (i + 1), napisy = ['nowy', 'kod', nr, 'już', 'wkrótce', '!'];
+  const el = document.createElement('div'); el.className = 'card';
+  el.innerHTML = '<div class="prev"><canvas width="' + W*PX + '" height="' + H*PX + '"></canvas><span class="hint">kliknij kostkę</span></div>' +
+    '<div class="body"><h2></h2><span class="tag"></span><p></p>' +
+    (k.link ? '<a class="btn" href="' + k.link + '">▶ Otwórz</a>' : '<span class="btn" aria-disabled="true">⏳ Wkrótce</span>') + '</div>';
+  el.querySelector('h2').textContent = k.tytul; el.querySelector('.tag').textContent = k.tag; el.querySelector('p').textContent = k.opis;
+  $('#grid').appendChild(el);
+  const sc = new THREE.Scene(), cam = new THREE.PerspectiveCamera(35, W / H, .1, 50); cam.position.set(0, 1.1, 7.2); cam.lookAt(0, -.15, 0);
+  sc.add(new THREE.HemisphereLight(0xffffff, 0x334466, 1.0)); const dl = new THREE.DirectionalLight(0xffffff, .55); dl.position.set(3, 4, 5); sc.add(dl);
+  const pod = new THREE.Mesh(new THREE.CircleGeometry(2.2, 48), new THREE.MeshBasicMaterial({ color:0x232b6b })); pod.rotation.x = -Math.PI/2; pod.position.y = -1.55; sc.add(pod);
+  const cien = new THREE.Mesh(new THREE.CircleGeometry(1.1, 32), new THREE.MeshBasicMaterial({ color:0x0d1030, transparent:true, opacity:.55 })); cien.rotation.x = -Math.PI/2; cien.position.y = -1.54; sc.add(cien);
+  const kost = new THREE.Mesh(new THREE.BoxGeometry(1.6, 1.6, 1.6), k.kolory.map((kol, j) => sciana(kol, napisy[j]))); kost.rotation.x = .35; sc.add(kost);
+  const K = { el, sc, cam, kost, cien, ctx:el.querySelector('canvas').getContext('2d'), w:i * 1.3, skok:0, ton:k.ton, vis:true };
+  el.querySelector('.prev').addEventListener('click', () => { K.skok = 1; dzwiek(K.ton); });
+  karty.push(K);
+});
+// dźwięk jak przy kostce w Alicji (każda kostka trochę inna nuta)
+let AC = null;
+function dzwiek(f){ try{ AC = AC || new (window.AudioContext || window.webkitAudioContext)(); const o = AC.createOscillator(), g = AC.createGain();
+  o.frequency.value = f; g.gain.setValueAtTime(.3, AC.currentTime); g.gain.exponentialRampToValueAtTime(.001, AC.currentTime + 1);
+  o.connect(g).connect(AC.destination); o.start(); o.stop(AC.currentTime + 1); }catch(e){} }
+// rysujemy tylko kostki widoczne na ekranie
+const io = 'IntersectionObserver' in window ? new IntersectionObserver(es => es.forEach(e => { const K = karty.find(k => k.el === e.target); if (K) K.vis = e.isIntersecting; })) : null;
+if (io) karty.forEach(K => io.observe(K.el));
+(function f(){ requestAnimationFrame(f); if (document.hidden) return;
+  karty.forEach(K => { if (!K.vis) return;
+    K.w += .01; K.kost.rotation.y = K.w; K.kost.rotation.x = .35 + Math.sin(K.w * .7) * .15;
+    const lot = Math.sin(K.w * 1.6) * .08; K.kost.position.y = lot; K.cien.scale.setScalar(1 - lot * .6);
+    if (K.skok > 0){ K.skok = Math.max(0, K.skok - .04); const s = Math.sin(K.skok * Math.PI); K.kost.scale.setScalar(1 + s * .15); K.kost.position.y = lot + s * .35; }
+    R.render(K.sc, K.cam); K.ctx.clearRect(0, 0, K.ctx.canvas.width, K.ctx.canvas.height); K.ctx.drawImage(R.domElement, 0, 0); });
+})();
+</script>
+</body>
+</html>
