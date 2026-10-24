@@ -6394,6 +6394,72 @@ function dmDziura(){ // ściany szybu dziury: między stropem piwnicy (−1,3) a
   dmBox(D.x1-D.x0,h,0.2,m,(D.x0+D.x1)/2,yc,D.zb-0.1,1);          // tylna (pod schodami na podest)
 }
 
+// ===== ✍ PODPISY NA ŚCIANACH BAWIALNI: Q — rysujesz myszką po ścianach jak w Paincie, Enter — zapisz (na zawsze, widzą wszyscy), Esc — anuluj =====
+// Podpisy leżą w centrali (/sciana/bawialnia). Każdy może pisać; zmazać może tylko woźny: raz otwórz przejscie.html?wozny=TWOJE-HASŁO (min. 16 znaków),
+// potem w trybie Q: Shift + prawy przycisk na podpisie = zmaż. Kreska = [ściana, kolor, grubość, x,y, x,y…] w pikselach płótna ściany (50 px na metr).
+var DM_SG={on:false,walls:[],near:null,all:{},pend:[],cur:null,col:'#e5484d',w:6,n:0,ui:null,key:'',ray:new THREE.Raycaster(),rb:new THREE.Raycaster(),poll:0,dn:false,
+  cols:['#e5484d','#f7b267','#f2c200','#3fb950','#5ec2b7','#6c9bd2','#b388eb','#ffffff','#111111'],ws:[3,6,12]};
+function dmSgUrl(q){var u=String(typeof TABBY_RELAY!=='undefined'?TABBY_RELAY:'').trim().replace(/\/+$/,'');if(!u)return '';if(!/^(https?|wss?):\/\//.test(u))u='https://'+u;return u.replace(/^ws/,'http')+'/sciana/bawialnia'+(q||'');}
+function dmSgBuild(X0,X1,Z1,Zb,Y,H){var L=Z1-Zb,W=X1-X0;
+  [[X0+0.05,(Zb+Z1)/2,Math.PI/2,L,[1,0,0]],[X1-0.05,(Zb+Z1)/2,-Math.PI/2,L,[-1,0,0]],[0,Z1-0.05,Math.PI,W,[0,0,-1]],[0,Zb+0.05,0,W,[0,0,1]]].forEach(function(q,i){ // lewa, prawa, przednia (z napisem), tylna (szyby)
+    var c=dmCanvas(Math.round(q[3]*50),Math.round(H*50)),t=new THREE.CanvasTexture(c),m=new THREE.Mesh(new THREE.PlaneGeometry(q[3],H),new THREE.MeshBasicMaterial({map:t,transparent:true,depthWrite:false}));
+    m.position.set(q[0],Y+H/2,q[1]);m.rotation.y=q[2];m.userData._sg=i;m.renderOrder=2;scene.add(m);DM_SG.walls.push({m:m,c:c,x:c.getContext('2d'),t:t,N:new THREE.Vector3(q[4][0],q[4][1],q[4][2])});});
+  try{var k=new URLSearchParams(location.search).get('wozny');if(k&&k.length>=16){localStorage.setItem('dm-wozny',k);var u=new URL(location.href);u.searchParams.delete('wozny');history.replaceState(null,'',u.pathname+u.search);
+    fetch(dmSgUrl(),{method:'POST',body:JSON.stringify({op:'claim',k:k})}).then(function(r){return r.json();}).then(function(j){setTimeout(function(){dmToast(j&&j.ok?'🧹 Jesteś woźnym bawialni — Shift + prawy przycisk w trybie Q zmazuje podpis':'🧹 Ten klucz woźnego nie pasuje',5000);},2500);}).catch(function(){});}
+    DM_SG.key=localStorage.getItem('dm-wozny')||'';}catch(e){}
+  setTimeout(function(){dmSgLoad();},1200);}
+function dmSgNear(){var A=[],B=new THREE.Box3(new THREE.Vector3(-16.8,DM_Y['1']-0.5,DM_LZ-0.8),new THREE.Vector3(16.8,DM_Y['1']+9.6,12.8)),bb=new THREE.Box3(),ow=DM_SG.walls.map(function(w){return w.m;});
+  scene.traverse(function(o){if(!o.isMesh||ow.indexOf(o)>=0||!o.visible)return;bb.setFromObject(o);if(!bb.isEmpty()&&bb.intersectsBox(B))A.push(o);});DM_SG.near=A;}
+function dmSgStroke(S){var W=DM_SG.walls[S[0]];if(!W)return;var x=W.x;x.strokeStyle=x.fillStyle=S[1];x.lineWidth=S[2];x.lineCap='round';x.lineJoin='round';
+  if(S.length<=5){x.beginPath();x.arc(S[3],S[4],S[2]/2,0,7);x.fill();}else{x.beginPath();x.moveTo(S[3],S[4]);for(var k=5;k<S.length;k+=2)x.lineTo(S[k],S[k+1]);x.stroke();}W.t.needsUpdate=true;}
+function dmSgRedraw(){DM_SG.walls.forEach(function(W){W.x.clearRect(0,0,W.c.width,W.c.height);W.t.needsUpdate=true;});
+  Object.keys(DM_SG.all).sort(function(a,b){return a-b;}).forEach(function(i){DM_SG.all[i].forEach(dmSgStroke);});DM_SG.pend.forEach(dmSgStroke);}
+function dmSgAdd(p,fresh){if(!p||DM_SG.all[p.i])return;var o;try{o=JSON.parse(p.d);}catch(e){return;}if(!o||!o.s)return;DM_SG.all[p.i]=o.s;DM_SG.n=Math.max(DM_SG.n,p.i);o.s.forEach(dmSgStroke);
+  if(fresh&&DM.level===1)dmToast('✍ Nowy podpis na ścianie bawialni');}
+function dmSgDel(i){if(!DM_SG.all[i])return;delete DM_SG.all[i];dmSgRedraw();}
+function dmSgLoad(){var u=dmSgUrl('?od='+DM_SG.n);if(!u)return;fetch(u,{cache:'no-store'}).then(function(r){return r.json();}).then(function(j){if(!j||!j.ok)return;(j.p||[]).forEach(function(p){dmSgAdd(p,false);});if(j.more)setTimeout(dmSgLoad,50);}).catch(function(){});}
+function dmSgHit(e){var r=renderer.domElement.getBoundingClientRect(),v=new THREE.Vector2((e.clientX-r.left)/r.width*2-1,-((e.clientY-r.top)/r.height)*2+1);
+  if(!DM_SG.near)dmSgNear();DM_SG.ray.setFromCamera(v,cam);var h=DM_SG.ray.intersectObjects(DM_SG.near.concat(DM_SG.walls.map(function(w){return w.m;})),false);
+  if(!h.length||h[0].object.userData._sg==null||!h[0].uv)return null;var H0=h[0],i=H0.object.userData._sg,W=DM_SG.walls[i];
+  DM_SG.rb.set(H0.point.clone().addScaledVector(W.N,0.01),W.N.clone().negate());DM_SG.rb.far=0.25;if(!DM_SG.rb.intersectObjects(DM_SG.near,false).length)return null; // za nakładką musi być prawdziwa ściana (nie otwór, nie drzwi)
+  return {w:i,x:Math.round(H0.uv.x*W.c.width),y:Math.round((1-H0.uv.y)*W.c.height)};}
+function dmSgUI(){if(DM_SG.ui)return DM_SG.ui;var d=document.createElement('div');d.style.cssText='position:fixed;left:50%;bottom:58px;transform:translateX(-50%);z-index:60;background:rgba(16,21,29,.92);border:1px solid #f0a35e;border-radius:14px;padding:10px 14px;color:#e6edf3;font:14px sans-serif;display:none;text-align:center;user-select:none';
+  var h='<div style="margin-bottom:8px"><b style="color:#f7b267">✍ Podpis na ścianie</b> — rysuj myszką po ścianach bawialni • <b>Enter</b> zapisz • <b>Esc</b> anuluj • <b>Backspace</b> cofnij kreskę • WASD chodzisz dalej</div><div>';
+  DM_SG.cols.forEach(function(c){h+='<span data-c="'+c+'" style="display:inline-block;width:26px;height:26px;border-radius:50%;margin:0 4px;background:'+c+';border:3px solid transparent;cursor:pointer;vertical-align:middle"></span>';});
+  h+='<span style="display:inline-block;width:18px"></span>';DM_SG.ws.forEach(function(w){h+='<span data-w="'+w+'" style="display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;margin:0 3px;border-radius:8px;background:#222a35;border:2px solid transparent;cursor:pointer;vertical-align:middle"><i style="display:block;width:'+(w+2)+'px;height:'+(w+2)+'px;border-radius:50%;background:#e6edf3"></i></span>';});
+  d.innerHTML=h+'</div><div id="dm-sg-st" style="margin-top:6px;font-size:12.5px;color:#9aa4b2"></div>';document.body.appendChild(d);
+  d.addEventListener('mousedown',function(e){e.stopPropagation();var t=e.target.closest('[data-c],[data-w]');if(!t)return;if(t.dataset.c)DM_SG.col=t.dataset.c;if(t.dataset.w)DM_SG.w=+t.dataset.w;dmSgMark();});
+  d.addEventListener('click',function(e){e.stopPropagation();});DM_SG.ui=d;dmSgMark();return d;}
+function dmSgMark(){var d=DM_SG.ui;if(!d)return;[].forEach.call(d.querySelectorAll('[data-c]'),function(el){el.style.borderColor=el.dataset.c===DM_SG.col?'#fff':'transparent';});[].forEach.call(d.querySelectorAll('[data-w]'),function(el){el.style.borderColor=+el.dataset.w===DM_SG.w?'#f7b267':'transparent';});}
+function dmSgSt(t){var e=DM_SG.ui&&DM_SG.ui.querySelector('#dm-sg-st');if(e)e.textContent=t||'';}
+function dmSgStart(){if(DM_SG.on)return;DM_SG.on=true;DM_SG.pend=[];DM_SG.cur=null;DM_SG.near=null;dmSgUI().style.display='block';
+  dmSgSt(DM_SG.key?'🧹 woźny: Shift + prawy przycisk na podpisie — zmaż':'');if(document.pointerLockElement)document.exitPointerLock();renderer.domElement.style.cursor='crosshair';}
+function dmSgEnd(lock){DM_SG.on=false;DM_SG.cur=null;DM_SG.dn=false;if(DM_SG.ui)DM_SG.ui.style.display='none';renderer.domElement.style.cursor='pointer';if(lock)try{renderer.domElement.requestPointerLock();}catch(e){}}
+function dmSgSave(){var P=DM_SG.pend;if(!P.length){dmSgEnd(true);return;}var d=JSON.stringify({s:P}),u=dmSgUrl();
+  if(d.length>99000){dmSgSt('Za duży podpis — cofnij kilka kresek (Backspace)');return;}
+  dmSgEnd(true);if(!u){dmToast('Brak centrali — podpis zostanie tylko u ciebie');return;}
+  fetch(u,{method:'POST',body:JSON.stringify({op:'add',d:d,n:DM.name||''})}).then(function(r){return r.json();}).then(function(j){if(!j||!j.ok)throw 0;
+    DM_SG.pend=[];var p={i:j.i,d:d};DM_SG.all[j.i]=P;DM_SG.n=Math.max(DM_SG.n,j.i);dmSend({t:'sg',p:p,i:DM.id});dmToast('✍ Podpis zapisany na ścianie — zostaje na zawsze');})
+  .catch(function(){dmToast('⚠ Nie udało się zapisać podpisu w centrali — widzisz go tylko ty, do wyjścia',4500);});}
+function dmSgCancel(){DM_SG.pend=[];dmSgEnd(false);dmSgRedraw();}
+function dmSgWipe(e){var h=dmSgHit(e);if(!h)return;var best=null,bd=14*14;Object.keys(DM_SG.all).forEach(function(i){DM_SG.all[i].forEach(function(S){if(S[0]!==h.w)return;for(var k=3;k<S.length;k+=2){var dx=S[k]-h.x,dy=S[k+1]-h.y,dd=dx*dx+dy*dy;if(dd<bd){bd=dd;best=i;}}});});
+  if(best===null){dmSgSt('Tu nie ma podpisu');return;}var i=+best;
+  fetch(dmSgUrl(),{method:'POST',body:JSON.stringify({op:'del',i:i,k:DM_SG.key})}).then(function(r){return r.json();}).then(function(j){if(!j||!j.ok){dmSgSt('🧹 Centrala nie przyjęła klucza woźnego');return;}dmSgDel(i);dmSend({t:'sgx',p:i,i:DM.id});dmSgSt('🧹 Zmazano podpis nr '+i);}).catch(function(){dmSgSt('🧹 Brak połączenia z centralą');});}
+addEventListener('keydown',function(e){
+  if(!DM_SG.on){if(e.code==='KeyQ'&&!e.repeat&&!DM_MOB&&!driveTarget&&DM.level===1&&DM_SG.walls.length&&!(e.target&&/INPUT|TEXTAREA/.test(e.target.tagName))){e.preventDefault();dmSgStart();}return;}
+  if(e.code==='Enter'||e.code==='NumpadEnter'){e.preventDefault();e.stopPropagation();dmSgSave();}
+  else if(e.code==='Escape'||e.code==='KeyQ'){e.preventDefault();e.stopPropagation();dmSgCancel();}
+  else if(e.code==='Backspace'){e.preventDefault();DM_SG.pend.pop();dmSgRedraw();}},true);
+addEventListener('mousedown',function(e){if(!DM_SG.on||e.target!==renderer.domElement)return;e.stopPropagation();e.preventDefault();
+  if(e.button===2&&e.shiftKey&&DM_SG.key){dmSgWipe(e);return;}if(e.button!==0)return;DM_SG.dn=true;DM_SG.cur=null;var h=dmSgHit(e);if(h){DM_SG.cur=[h.w,DM_SG.col,DM_SG.w,h.x,h.y];DM_SG.pend.push(DM_SG.cur);dmSgStroke(DM_SG.cur);}},true);
+addEventListener('mousemove',function(e){if(!DM_SG.on||!DM_SG.dn)return;var h=dmSgHit(e);if(!h){DM_SG.cur=null;return;}var C=DM_SG.cur;
+  if(!C||C[0]!==h.w){C=DM_SG.cur=[h.w,DM_SG.col,DM_SG.w,h.x,h.y];DM_SG.pend.push(C);dmSgStroke(C);return;}
+  var lx=C[C.length-2],ly=C[C.length-1];if((lx-h.x)*(lx-h.x)+(ly-h.y)*(ly-h.y)<4)return;C.push(h.x,h.y);var W=DM_SG.walls[h.w],x=W.x;x.strokeStyle=C[1];x.lineWidth=C[2];x.lineCap='round';x.beginPath();x.moveTo(lx,ly);x.lineTo(h.x,h.y);x.stroke();W.t.needsUpdate=true;},true);
+addEventListener('mouseup',function(e){if(DM_SG.on){DM_SG.dn=false;DM_SG.cur=null;}},true);
+addEventListener('click',function(e){if(DM_SG.on&&e.target===renderer.domElement){e.stopPropagation();e.preventDefault();}},true); // w trybie podpisu klik nie łapie myszy z powrotem
+function dmSgTick(dt){if(DM_SG.on){var si=document.getElementById('start-info');if(si)si.style.display='none';if(DM.level!==1||driveTarget)dmSgCancel();return;}
+  if(DM.level===1){DM_SG.poll+=dt;if(DM_SG.poll>45){DM_SG.poll=0;dmSgLoad();}}} // co 45 s dociąga nowe podpisy (gdyby wiadomość przez sieć zginęła)
+
 // ---------- 🎈 piętro 1: BAWIALNIA ----------
 DM.balls=[];
 function dmRnd(seed){var r=seed;return function(){r=(r*16807)%2147483647;return r/2147483647;};}
@@ -6421,13 +6487,17 @@ function dmPlayroom(){
   dmBox(-DM_SX-X0,0.18,0.04,dmMat(0xf7b267),(X0-DM_SX)/2,Y+2.4,DM_LZ+0.02);dmBox(X1-DM_SX,0.18,0.04,dmMat(0xf7b267),(X1+DM_SX)/2,Y+2.4,DM_LZ+0.02); // pas omija szyby
   for(var lz=Z0+5;lz<Z1;lz+=8)for(var lx=-10;lx<=10;lx+=10)dmBox(3,0.06,0.9,new THREE.MeshBasicMaterial({color:0xfff8ee}),lx,Y+H-0.02,lz);
   dmLight(f,0xfff4e6,0.55,40,-6,Y+7.5,-14);dmLight(f,0xfff4e6,0.55,40,6,Y+7.5,2);
-  var sg=new THREE.Mesh(new THREE.PlaneGeometry(9,2.25),new THREE.MeshBasicMaterial({map:dmSignTex('🎈 Bawialnia','kopnij • popchnij • podskocz')}));sg.rotation.y=Math.PI;sg.position.set(0,Y+6,Z1-0.03);scene.add(sg);
+  var sgc=dmCanvas(1024,256),sgx=sgc.getContext('2d');sgx.fillStyle='#10151d';sgx.fillRect(0,0,1024,256);sgx.fillStyle='#f0a35e';sgx.fillRect(0,0,1024,10);sgx.textAlign='center'; // napis: Bawialnia + zaproszenie do podpisu
+  sgx.fillStyle='#fff';sgx.font='bold 76px sans-serif';sgx.fillText('🎈 Bawialnia',512,100);sgx.fillStyle='#f7b267';sgx.font='bold 40px sans-serif';sgx.fillText('✍ Zostaw swój podpis',512,165);
+  sgx.fillStyle='#9aa4b2';sgx.font='34px sans-serif';sgx.fillText('kliknij Q i pisz po ścianach • potwierdź Enter',512,220);
+  var sg=new THREE.Mesh(new THREE.PlaneGeometry(9,2.25),new THREE.MeshBasicMaterial({map:new THREE.CanvasTexture(sgc)}));sg.rotation.y=Math.PI;sg.position.set(0,Y+6,Z1-0.03);scene.add(sg);
   // bramka po lewej (słupki w kolizjach — odbijają piłki); prawej już nie ma — w jej miejscu jest dziura
   [-1].forEach(function(s){var gx=s*15.2,gz=-4,post=dmMat(0xffffff,{roughness:0.4}),net=new THREE.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:0.18,side:THREE.DoubleSide,depthWrite:false});
     [-2.2,2.2].forEach(function(o){dmBox(0.14,2.3,0.14,post,gx,Y+1.15,gz+o,1);dmBox(1.4,0.08,0.08,post,gx+s*0.7,Y+2.26,gz+o);});
     dmBox(0.14,0.14,4.54,post,gx,Y+2.3,gz);var n=new THREE.Mesh(new THREE.PlaneGeometry(4.4,2.3),net);n.rotation.y=Math.PI/2;n.position.set(gx+s*0.75,Y+1.15,gz);scene.add(n);
     [-2.2,2.2].forEach(function(o){var n2=new THREE.Mesh(new THREE.PlaneGeometry(1.4,2.3),net);n2.position.set(gx+s*0.7,Y+1.15,gz+o);scene.add(n2);wCols.push({x:gx+s*0.7,z:gz+o,hw:0.7,hd:0.05,y:Y,h:2.3,_dm:1});});
     var ln=dmBox(0.08,0.012,4.4,new THREE.MeshBasicMaterial({color:0xffffff}),gx,Y+0.006,gz);ln.castShadow=false;});
+  dmSgBuild(X0,X1,Z1,DM_LZ,Y,H);
   dmPodest();
   // miękkie klocki do wskakiwania (w rogu)
   [[-12,8,2.4,0.5,2.4,0x5ec2b7],[-9.6,8,2.4,1.0,2.4,0xf7b267],[-12,5.6,2.4,1.5,2.4,0xb388eb]].forEach(function(q){dmBox(q[2],q[3],q[4],dmMat(q[5],{roughness:1}),q[0],Y+q[3]/2,q[1],1);});
@@ -6693,6 +6763,8 @@ function dmMsg(d){
   else if(d.t==='cst'||d.t==='cfin'){dmClCompMsg(d);}
   else if(d.t==='b'){dmBallRecv(d);}
   else if(d.t==='bq'){dmBallSend(true);}
+  else if(d.t==='sg'){dmSgAdd(d.p,true);}
+  else if(d.t==='sgx'){dmSgDel(d.p);}
   else if(d.t==='bye'){var R2=DM.rem[d.i];if(R2){dmToast('<b>'+dmEsc(R2.nm||'Gość')+'</b> wychodzi');dmDrop(d.i);}}
 }
 function dmPos(){ // 10×/s w ruchu, raz na sekundę na stojąco (zegar prawdziwy — działa też, gdy karta jest w tle)
@@ -6765,7 +6837,7 @@ function dmWho(){DM.whoDirty=false;if(!DM.ui)return;var ks=Object.keys(DM.rem),h
 // ---------- co klatkę ----------
 function dmTick(dt){
   dmNet(dt);dmTabbyRain(dt);DM_CATS.forEach(function(C){dmCatTick(C,dt);});if(DM.mon&&new Date().getMinutes()!==DM.mon.min)dmMonDraw();
-  dmMobTick(dt);dmLevTick(dt);if(!driveTarget&&DM_LEV.cur<0)dmStairCam();dmShotTick(dt);dmKinoTick(dt);dmRaceTick(dt);dmClimbTick(dt);dmLiftsReady();dmLightsTick();var lv=charY<-4?-1:charY>6?1:0;if(lv!==DM.level){DM.level=lv;dmLightsLvl();if(lv===1)dmBallsWake();DM.last='';DM.whoDirty=true;}
+  dmMobTick(dt);dmLevTick(dt);if(!driveTarget&&DM_LEV.cur<0)dmStairCam();dmShotTick(dt);dmKinoTick(dt);dmSgTick(dt);dmRaceTick(dt);dmClimbTick(dt);dmLiftsReady();dmLightsTick();var lv=charY<-4?-1:charY>6?1:0;if(lv!==DM.level){DM.level=lv;dmLightsLvl();if(lv===1)dmBallsWake();DM.last='';DM.whoDirty=true;}
   var best=null,bd=2.0;DM.doors.forEach(function(D){if((D.lv||0)!==DM.level)return;var d=Math.hypot(charX-D.x,charZ-D.z);if(d<bd){bd=d;best=D;}});
   DM.near=best;if(DM.ui){var hn=DM.ui.hint,tx=(best?(best.hint||('E — zajrzyj: '+best.label)):'');
     if(tx&&pLock&&nearIdx<0){if(hn._t!==tx){hn.innerHTML=tx;hn._t=tx;}hn.style.display='block';}else hn.style.display='none';}
@@ -6842,7 +6914,7 @@ function dmMobTick(dt){var M=DM.mob;if(!M)return;var t=M.turn();if(t)camYaw+=t*d
   setTimeout(function(){dmShirt(DM.col);dmMobile();dmPodestGuns();},450);
   window.TBDOM={DM:DM};
   document.getElementById('start-info').textContent='Kliknij, aby wejść do domu';
-  var inf=document.getElementById('info');if(inf)inf.textContent='WASD ruch • Shift bieg • Spacja skok • Tab kamera • E akcja • lewy szyb: lewitacja w górę • prawy: powrót do Alicji';
+  var inf=document.getElementById('info');if(inf)inf.textContent='WASD ruch • Shift bieg • Spacja skok • Tab kamera • E akcja • Q podpis na ścianie (bawialnia) • lewy szyb: lewitacja w górę • prawy: powrót do Alicji';
 })();
 
 
