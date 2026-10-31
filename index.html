@@ -4769,7 +4769,7 @@ const GRY_STEPS = [{ t: 'Tabby', lines: [],
     const g = gen, Z = GR_ZDANIA, on = id => () => { const e = $(id); if (e) e.classList.add('on'); };
     const krok = f => { queue = queue.then(() => g === gen && document.body.classList.contains('langmode') ? f() : null); };
     const okno = $('#grOkno'), SC = grScena(okno), ob = [...document.querySelectorAll('#grPasek .b')][1];
-    $('#grGo').onclick = () => window.open('tabby/index.html', '_blank');
+    $('#grGo').onclick = () => window.open('https://miniklik.github.io/tabby/', '_blank');
     const lec = (cel, g) => { const img = SC.zdjecie(), box = $('#gr3'), c = $(cel), dx = c.offsetLeft - box.clientWidth / 2;
       for (let k = 0; k < 3; k++) setTimeout(() => { if (g !== gen || !document.body.contains(box)) return; const l = document.createElement('div'); l.className = 'lot'; l.style.backgroundImage = `url(${img})`;
         box.appendChild(l); void l.offsetWidth; l.style.transform = `translateX(${dx}px) scale(.55)`; l.style.opacity = '0';
@@ -4831,7 +4831,7 @@ $('#lgNext').onclick = () => { const S = LG_STEPS[lgIdx];
   if (S.phases && lgPh < S.phases.length - 1) return lgPhase(lgPh + 1);
   lgIdx === LG_STEPS.length - 1 ? closeLang() : lgShow(lgIdx + 1); };
 // Gry: „Otwórz Tabby” na dolnym pasku — od razu, bez słuchania opisu (to samo co przycisk na końcu animacji)
-$('#lgOpen').onclick = () => { cancelSay(); window.open('tabby/index.html', '_blank'); };
+$('#lgOpen').onclick = () => { cancelSay(); window.open('https://miniklik.github.io/tabby/', '_blank'); };
 $('#lgPrev').onclick = () => { const S = LG_STEPS[lgIdx];
   if (S.phases && lgPh >= 0){ if (lgPh === 0 || S.phases[lgPh].split) return lgShow(lgIdx); return lgPhase(lgPh - 1); }
   if (lgIdx > 0) lgShow(lgIdx - 1); };
